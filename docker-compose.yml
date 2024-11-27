@@ -1,0 +1,58 @@
+version: '3.9'
+
+services:
+  flask-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_USER=local
+      - DB_PASSWORD=secret
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=location_db
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - db
+      - rabbitmq
+
+  consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: [ "python", "consumer.py" ]
+    environment:
+      - DB_USER=local
+      - DB_PASSWORD=secret
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=location_db
+      - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - db
+      - rabbitmq
+
+  db:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: local
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: location_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management console
+
+volumes:
+  db_data:
